@@ -2,37 +2,111 @@
 <html>
 <head>
     <title>AI Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@3.0.7/marked.min.js"></script>
     <style>
-        #chat-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        :root {
+            --primary-color: #2962ff;
+            --bg-light: #ffffff;
+            --bg-dark: #f8f9fa;
         }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            background: var(--bg-dark);
+            margin: 0;
+        }
+
+        #chat-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 20px;
+            background: var(--bg-light);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+
         #chat-messages {
-            height: 400px;
-            border: 1px solid #ccc;
+            height: 600px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
             overflow-y: auto;
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 16px;
+            background: var(--bg-light);
         }
+
         .message {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 5px;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease-in;
         }
+
         .user-message {
-            background-color: #e3f2fd;
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
         }
+
         .ai-message {
-            background-color: #f5f5f5;
+            background-color: var(--bg-dark);
+            color: #333;
+            margin-right: auto;
         }
+
         #message-form {
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
+
         #message-input {
             flex-grow: 1;
-            padding: 10px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        #message-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Code block styling */
+        pre code {
+            border-radius: 6px;
+            font-size: 14px;
+            padding: 12px !important;
+        }
+
+        .message code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -50,16 +124,23 @@
         const messageInput = document.getElementById('message-input');
         const chatMessages = document.getElementById('chat-messages');
 
+        // Configure marked for safe HTML
+        marked.setOptions({
+            highlight: function(code, lang) {
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            sanitize: false
+        });
+
         messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const message = messageInput.value.trim();
             if (!message) return;
 
-            // Add user message to chat
             addMessage(message, 'user');
             messageInput.value = '';
 
-            // Send message to backend
             const formData = new FormData();
             formData.append('message', message);
 
@@ -73,17 +154,28 @@
                 if (data.response) {
                     addMessage(data.response, 'ai');
                 } else {
-                    addMessage('Sorry, something went wrong.', 'ai');
+                    addMessage('Unable to process the request.', 'ai');
                 }
             } catch (error) {
-                addMessage('Error: Could not connect to the server.', 'ai');
+                addMessage('Connection error. Please try again.', 'ai');
             }
         });
 
         function addMessage(message, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', `${sender}-message`);
-            messageDiv.textContent = message;
+            
+            // Parse markdown and render HTML for AI messages
+            if (sender === 'ai') {
+                messageDiv.innerHTML = marked(message);
+                // Highlight all code blocks
+                messageDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+            } else {
+                messageDiv.textContent = message;
+            }
+            
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
